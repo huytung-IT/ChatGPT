@@ -4,11 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:chatgpt_app/SearchHistoryPage.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'Suggestions.dart';
+import 'Login.dart';
 
 class ChatScreen extends StatefulWidget {
-  final String conversationId;
-
-  const ChatScreen({Key? key, required this.conversationId}) : super(key: key);
+  const ChatScreen({Key? key}) : super(key: key);
 
   @override
   _ChatScreenState createState() => _ChatScreenState();
@@ -22,11 +21,11 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
 
 
+
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-
     _fieldNode.addListener(() {
       setState(() {
         _showSuggestions = _fieldNode.hasFocus;
@@ -36,8 +35,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (mounted) {
         setState(() {});
       }
-
     });
+    ChatServices.signInWithGoogle();
   }
 
   @override
@@ -54,6 +53,23 @@ class _ChatScreenState extends State<ChatScreen> {
           title: const Text('Chat GPT'),
           centerTitle: true,
           backgroundColor: const Color.fromRGBO(16, 163, 127, 1),
+          actions: [
+            Padding(padding: const EdgeInsets.only(top: 20),
+              child: Text(ChatServices.currentUser?.displayName??''),
+            ),
+            IconButton(
+              icon: const Icon(Icons.exit_to_app),
+              onPressed: () async {
+                ChatServices.navigateCallback = () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) =>const Login()),
+                  );
+                };
+                await ChatServices.signOutWithGoogle();
+              },
+            ),
+          ],
         ),
         backgroundColor: Colors.white,
         drawer: const Drawer(
@@ -66,8 +82,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 controller: _scrollController,
                 padding: const EdgeInsets.only(
                     left: 15, top: 20, right: 20, bottom: 80),
-                itemCount: ChatServices.currentChatConversation == null
-                    ? 0
+                itemCount: ChatServices.currentChatConversation == null ? 0
                     : ChatServices.currentChatConversation?.messages.length,
                 itemBuilder: (context, index) {
                   var msg =
@@ -95,34 +110,9 @@ class _ChatScreenState extends State<ChatScreen> {
                               child: Text(
                                 ChatServices.currentChatConversation!
                                     .messages[index].msg,
-                                // style: const TextStyle(fontSize: 16,),
                               ),
                             ),
                           ),
-
-                          // const Positioned(
-                          //   left: 0,
-                          //   top: 0,
-                          //   child: CircleAvatar(
-                          //     backgroundImage: NetworkImage(
-                          //         'https://th.bing.com/th/id/OIP.JE-inloKPHCLxjm4wtMJigAAAA?pid=ImgDet&rs=1'),
-                          //     radius: 12,
-                          //   ),
-                          // ),
-                          // Positioned(
-                          //   right: 0,
-                          //   bottom: 0,
-                          //   height: 30, // tăng giá trị chiều cao
-                          //   width: 96,
-                          //   child: GestureDetector(
-                          //     onTap: () {
-                          //       // Xử lý khi nhấp vào LikeDislikeChatMessage
-                          //     },
-                          //     child: LikeDislikeChatMessage(
-                          //       chatMessage: ChatServices.currentChatConversation!.messages[index],
-                          //     ),
-                          //   ),
-                          // ),
                         ],
                       ),
                     );
@@ -154,29 +144,6 @@ class _ChatScreenState extends State<ChatScreen> {
                               ),
                             ),
                           ),
-                          // Positioned(
-                          //    right: 75,
-                          //    bottom: 0,
-                          //    height: 8,
-                          //    width: 96,
-                          //    child: LikeDislikeChatMessage(
-                          //        chatMessage: ChatServices
-                          //            .currentChatConversation!
-                          //            .messages[index])
-                          // ),
-                          // const Positioned(
-                          //   bottom:0,
-                          //   right:0,
-                          //
-                          //   child: CircleAvatar(
-                          //     backgroundColor: Colors.white,
-                          //     radius: 12,
-                          //     child: Icon(
-                          //       Icons.face_rounded,
-                          //       color: Colors.black,
-                          //     ),
-                          //   ),
-                          // ),
                         ],
                       ),
                     );
@@ -187,13 +154,10 @@ class _ChatScreenState extends State<ChatScreen> {
             if (_isSending) ...[
               LoadingAnimationWidget.waveDots(color: Colors.black, size: 50)
             ],
-              // Expanded(
-                // child: Stack(
-                //   children: [
                   Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                      if (_showSuggestions)
+                        if (_showSuggestions && isKeyboardVisible())
                   Container(
                     child: Card(
                       color: Colors.grey[200],
@@ -210,20 +174,19 @@ class _ChatScreenState extends State<ChatScreen> {
                                           ? FontWeight.bold
                                           : FontWeight.normal,
                                 ),
+
                               ),
                               onTap: () {
-                                if(sggk == null) {
+                                if(sggk.isEmpty) {
                                   ChatServices.currentChatConversation?.suggestName == ChatGptRequestSuggestions.suggestionMap.keys.first
-                                    ? FontWeight.bold
-                                    : FontWeight.normal;
+                                      ? FontWeight.bold
+                                      : FontWeight.normal;
                                 }else {
-                                  // print("aaaaaa${ ChatGptRequestSuggestions.suggestionMap.keys.first}");
-                                  ChatServices.currentChatConversation?.suggestName = sggk;
+                                ChatServices.currentChatConversation?.suggestName = sggk;
+                                print('$sggk---------------------------00000000000000');
                                 }
-
-                                ChatServices.updateConversation(ChatServices.currentChatConversation!);
+                                // ignore: unnecessary_null_comparison
                                 if(mounted){setState(() {
-
                                 });}
                               },
                             ),
@@ -277,7 +240,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 try {
                                   _isSending = true;
                                   await ChatServices.trySendChatMsg(
-                                      "from", "to", _textController.text);
+                                      ChatServices.currentUser!.id, 'from', 'to', _textController.text);
                                   _textController.clear();
                                   _scrollController.animateTo(
                                     _scrollController.position.maxScrollExtent,
@@ -290,7 +253,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 } catch (error) {
                                   ScaffoldMessenger.of(context)
                                       .showSnackBar(const SnackBar(
-                                    content: Text('error'),
+                                    content: Text('erroryyyyyyy'),
                                     backgroundColor: Colors.red,
                                   ));
                                 } finally {
@@ -311,6 +274,10 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
+  }
+  bool isKeyboardVisible() {
+    final double keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    return keyboardHeight > 0;
   }
 }
 

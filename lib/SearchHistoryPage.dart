@@ -13,6 +13,7 @@ class _SearchHistoryPageState extends State<SearchHistoryPage> {
   StreamSubscription<ChatConversation>? currentSub;
   bool hasSearched = false;
   int? selectedCardIndex;
+  String? id;
   @override
   void initState() {
     super.initState();
@@ -27,18 +28,9 @@ class _SearchHistoryPageState extends State<SearchHistoryPage> {
 
           hasSearched = true;
         });
-        _initNewChatScreen();
       }
       if (mounted) setState(() {});
     });
-  }
-  void _initNewChatScreen() {
-    var newChatScreen = ChatScreen(conversationId: ChatServices.currentChatConversation!.id);
-    // print( ChatServices.currentChatConversation!.id);
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => newChatScreen),
-    );
   }
 
   @override
@@ -48,6 +40,9 @@ class _SearchHistoryPageState extends State<SearchHistoryPage> {
   }
   @override
   Widget build(BuildContext context) {
+    var xxx= ChatServices.getHistoryByCurrentUserLogin();
+    print('${xxx.length}----------------');
+
     return Scaffold(
         appBar: AppBar(
           title: const Text('Lịch sử tra cứu'),
@@ -61,26 +56,57 @@ class _SearchHistoryPageState extends State<SearchHistoryPage> {
               children: [
                 Expanded(
                   child: ListView.builder(
-                    itemCount: ChatServices.histories.length,
+                    itemCount: xxx.length,
                     itemBuilder: (context, index) {
                       return Card(
                         color: selectedCardIndex == index
                             ? Colors.blue[100]
                             : Colors.grey[100],
                         child: ListTile(
-                            title: Text(ChatServices.histories[index].title),
+                            title: Text(xxx[index].title),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete_outline),
                               onPressed: () {
                                 setState(() {
-                                  ChatServices.deleteConversation(
-                                      ChatServices.histories[index].id);
+                                  ChatServices.deleteConversation(xxx[index].id);
+                                  //todo: khi delete cai cuoi cung thi history empty
+                                  // quay ve man chatGPT thif chet vi currentConversation bi null nen heo man chatGpt
+                                  // can create 1 cais mowi
+                                  // lay history cua thang dang nhap hien tai, lenght==0 thi goi ham createConversation;
+                                  if (ChatServices.currentChatConversation != null &&
+                                      ChatServices.currentChatConversation!.id ==  xxx[index].id) {
+                                    ChatServices.currentChatConversation =
+                                        ChatServices.createConversataion(ChatServices.currentUser!.id);
+                                    ChatServices.navigateCallback = () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (context) => ChatScreen()),
+                                      );
+                                    };
+                                   }else {
+                                    if(ChatServices.histories.isEmpty) {
+                                      ChatServices.currentChatConversation =
+                                        ChatServices.createConversataion(ChatServices.currentUser!.id);
+                                      ChatServices.navigateCallback = () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => ChatScreen()),
+                                        );
+                                      };
+                                    }
+                                  }
                                 });
                               },
                             ),
                             onTap: () {
                               ChatServices.historyDoselectConversition(
-                                  ChatServices.histories[index].id);
+                                  xxx[index].id);
+                              ChatServices.navigateCallback = () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => ChatScreen()),
+                                );
+                              };
                             }),
                       );
                     },
@@ -100,14 +126,17 @@ class _SearchHistoryPageState extends State<SearchHistoryPage> {
                         backgroundColor: Colors.red,
                       ),
                     );
+
                     return;
                   }try {
                     hasSearched = true;
-                    ChatServices.createConversataion();
-                    setState(() {
-                      _initNewChatScreen();
-                    });
-                    Navigator.pop(context);
+                    ChatServices.currentChatConversation = ChatServices.createConversataion(ChatServices.currentUser!.id);
+                    ChatServices.navigateCallback = () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ChatScreen()),
+                      );
+                    };
                     await Future.delayed(const Duration(milliseconds: 300));
                   } catch (error) {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

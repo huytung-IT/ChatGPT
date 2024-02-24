@@ -54,9 +54,6 @@ class ChatGptRequestSuggestions {
     }
   };
 
-  // static void addSuggestions(String conversationId, List<Suggestion> suggestions) {
-  //   suggestionMap[conversationId] = suggestions;
-  // }
 
   static dynamic getSuggestionAndBuildApiRequest(String keySuggestName, String textFromUser) {
     var requestBuildFromSuggestion= suggestionMap[keySuggestName];
@@ -64,6 +61,4 @@ class ChatGptRequestSuggestions {
 
     return requestBuildFromSuggestion;
   }
-
-
 }

@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:chatgpt_app/Suggestions.dart';
-
+import 'model/UserEtity.dart';
 import 'model/ChatMessageEtity.dart';
 import 'api_Services.dart';
 import 'ChatConversationRepository.dart';
 import 'model/ChatconversationEtity.dart';
 import 'package:uuid/uuid.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+
 
 class ChatServices{
   static final ChatConversationRepository _Repository = ChatConversationRepository();
@@ -15,17 +17,22 @@ class ChatServices{
       _chatConversationController.stream;
   static List<ChatConversation> histories=[];
   static ChatConversation? currentChatConversation;
+  static GoogleSignInAccount? currentUser;
+  static final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
+  static Function()? navigateCallback;
 
   static Future<void> initHive() async {
+
     await _Repository.init();
-    var allConversationEntities = _Repository.getAllConversations();
-    var allConversations = allConversationEntities.map((conversationEntity) {
+    var allConversationEntityes = _Repository.getAllConversations();
+    var allConversations = allConversationEntityes.map((conversationEntity) {
       var conversation = ChatConversation();
       conversation.id = conversationEntity.id;
+      conversation.userId = conversationEntity.userId??'';
       conversation.Status = conversationEntity.status;
       conversation.suggestName= conversationEntity.suggestName;
-
       conversation.messages=[];
+
       conversation.messages = _Repository.getMessagesByConversationId(conversation.id).map((messageEntity) {
         var message = ChatMessage();
         message.id = messageEntity.id;
@@ -33,14 +40,13 @@ class ChatServices{
         message.to = messageEntity.to;
         message.msg = messageEntity.msg;
         message.timeSent = messageEntity.timeSent;
+
         return message;
       }).toList();
       return conversation;
     }).toList();
-
     histories = [];
     histories = allConversations;
-
   }
 
   static var _uuidGen=Uuid();
@@ -51,12 +57,14 @@ class ChatServices{
   static void historyDoselectConversition(String id){
   currentChatConversation= histories.where((element) =>element.id==id).first;
   _chatConversationController.add(currentChatConversation!);
+  navigateCallback?.call();
 }
-
-  static  ChatConversation createConversataion(){
+  static ChatConversation createConversataion(String userId){
     var chatconversation= ChatConversation();
     chatconversation.id= GenerateId();
+    chatconversation.userId = userId;
     chatconversation.messages=[];
+    chatconversation.suggestName = getDefaultSuggestion();
     histories.add(chatconversation);
     _chatConversationController.add(chatconversation);
 
@@ -65,45 +73,68 @@ class ChatServices{
     conversationEtity.status=chatconversation.Status;
     conversationEtity.title= chatconversation.title;
     conversationEtity.suggestName= chatconversation.suggestName;
+    conversationEtity.userId = chatconversation.userId;
     _Repository.addOrUpdateConversation(conversationEtity);
 
     return chatconversation;
+
+  }
+  static getDefaultSuggestion() {
+    if (ChatGptRequestSuggestions.suggestionMap.isNotEmpty) {
+      return ChatGptRequestSuggestions.suggestionMap.keys.first;
+    }
+    return '';
+  }
+  static storeUserInformation(GoogleSignInAccount userAccount){
+
+    var existingUsers = _Repository.getUserByGoogle(userAccount.id);
+
+    if (existingUsers.isEmpty) {
+      var userEntity = UserEtity();
+      userEntity.Sn_id = userAccount.id;
+      userEntity.Sn_displayName = userAccount.displayName ?? '';
+      userEntity.Sn_userName = userAccount.displayName;
+      userEntity.Sn_photoUrl = userAccount.photoUrl;
+      userEntity.Sn_Type = 'google';
+
+       _Repository.addUser(userEntity);
+      print("tai khoan da tao moi thanh cong!---------9999999999");
+    } else {
+
+      print("tai khoan da ton tai---------");
+
+    }
+  }
+  static GoogleSignInAccount? getCurrentUserAccount() {
+    return currentUser;
+
+}
+  static List<ChatConversation> getHistoryByCurrentUserLogin() {
+    var userId = currentUser?.id;
+    return histories.where((conversation) => conversation.userId == userId).toList();
   }
 
-  static Future<void> updateConversation( ChatConversation chatconversation) async
-  {
-    var conversationEtity= ChatconversationEtity();
-    conversationEtity.id=chatconversation.id;
-    conversationEtity.status=chatconversation.Status;
-    conversationEtity.title= chatconversation.title;
-    conversationEtity.suggestName= chatconversation.suggestName;
-   await _Repository.addOrUpdateConversation(conversationEtity);
-  }
   static  void closeConversation(String id){
-    var toRem= tryGetConversation(id);
+    var toRem= tryGetConversation(currentUser!.id,id);
     toRem.Status=2;
   }
+
   static  void deleteConversation(String id){
-    var toRem= tryGetConversation(id);
+    var toRem= tryGetConversation(currentUser!.id,id);
     histories.remove(toRem);
     _Repository.deleteConversation(id);
     histories.removeWhere((conversation) => conversation.id == id);
-    if (currentChatConversation != null && currentChatConversation!.id == id) {
-      // Trả về trang mới
-      currentChatConversation = createConversataion();
-    }
-
     _chatConversationController.add(currentChatConversation!);
   }
-  static  ChatConversation tryGetConversation(String id){
-      return  histories.firstWhere((e)=>e.id==id);
+  static  ChatConversation tryGetConversation(String userId,String id){
+      return histories.firstWhere((e)=>e.userId == userId && e.id==id);
   }
-  static Future<void> trySendChatMsg(String from, String to,String question)
+  static Future<void> trySendChatMsg( String userId, String from, String to,String question)
   async {
-    currentChatConversation ??= createConversataion();
+    currentChatConversation ??= createConversataion(currentUser!.id);
     var msg = ChatMessage();
     msg.id = GenerateId();
-     msg.from= from;
+     msg.from= currentUser!.id;
      msg.to='gpt';
      msg.msg= question;
      msg.timeSent=DateTime.now();
@@ -117,15 +148,15 @@ class ChatServices{
     chatmesageEtity.msg= msg.msg;
     chatmesageEtity.timeSent= msg.timeSent;
     _Repository.addChatmessage(chatmesageEtity);
+
      //chat gpt
     var templateRequest= ChatGptRequestSuggestions.getSuggestionAndBuildApiRequest(currentChatConversation!.suggestName, question);
-    Map<String, dynamic> apiResponse = await ApiServices.sendChatRequest(
-        templateRequest);
+    Map<String, dynamic> apiResponse = await ApiServices.sendChatRequest(templateRequest);
      String replyMessage= apiResponse['choices'][0]['message']['content'];
     var msgGpt = ChatMessage();
     msgGpt.id= GenerateId();
     msgGpt.from= 'gpt';
-    msgGpt.to=from;
+    msgGpt.to=currentUser!.id;
     msgGpt.msg= replyMessage;
     msgGpt.timeSent=DateTime.now();
     currentChatConversation!.messages.add(msgGpt);
@@ -139,13 +170,48 @@ class ChatServices{
     chatmesageGptEtity.timeSent= msgGpt.timeSent;
     _Repository.addChatmessage(chatmesageGptEtity);
       }
+
+  static Future<GoogleSignInAccount?> signInWithGoogle() async {
+    try {
+      GoogleSignInAccount? user = currentUser;
+      if (user == null) {
+        user = await googleSignIn.signIn();
+
+        if (user != null) {
+          currentUser=user;
+          // todo: neu history theo user , length>0 thi lay cai lastest ra gan vao currentChatConverstaion
+          // con history.where(user==userid).lenghth==0 thi tao moi
+          currentChatConversation = createConversataion(currentUser?.id??'');
+          navigateCallback?.call();
+        }
+      }
+
+      return user;
+    } catch (error) {
+      print('Error signing in with Google: $error');
+      return null;
+    }
+  }
+  static Future<void> signOutWithGoogle() async {
+    try {
+      googleSignIn.disconnect();
+      await googleSignIn.signOut();
+      navigateCallback?.call();
+      print('Signed out');
+    } catch (error) {
+      print('Error signing out: $error');
+    }
+  }
     }
 class ChatConversation{
   String id="";
+  String userId = "";
   List<ChatMessage> messages=[];
   int Status = 0;//0: moi, 1: dang chat, 2: dong(close)
   String get title=> messages.isEmpty?id: messages.first.msg;
   String suggestName="";
+  List<User> user =[];
+
 }
 class ChatMessage{
   String id= "";
@@ -156,6 +222,14 @@ class ChatMessage{
   bool liked = false;
   bool disliked = false;
 }
+class User{
+  String id='';
+  String displayName='';
+  String? userName ;
+  var photoUrl;
+  String Type='google';
+}
+
 
 
 

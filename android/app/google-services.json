@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "996379269490",
+    "project_id": "flutter--signin-3277d",
+    "storage_bucket": "flutter--signin-3277d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:996379269490:android:28113ef979e16c932e65eb",
+        "android_client_info": {
+          "package_name": "com.example.chatgpt_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "996379269490-056mp97kc1pnp1dd3gompgv70aibe59n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAd6F_Wq-mXXuQwF_yLGMQ6u-9cw5nsMmU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "996379269490-056mp97kc1pnp1dd3gompgv70aibe59n.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
