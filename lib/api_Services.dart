@@ -6,10 +6,10 @@ class ApiServices {
 
   static Future<dynamic> sendChatRequest(dynamic requestBuildFromSuggestion) async {
     try {
-      var url = Uri.parse('https://api.openai.com/v1/chat/completions');
+      var url = Uri.parse('');
       var headers = {
         'Content-Type': 'application/json; charset=UTF-8',
-        'Authorization': 'Bearer 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'
+        'Authorization': ''
       };
 
 
