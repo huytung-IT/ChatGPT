@@ -80,13 +80,13 @@ class _SignInState extends State<SignIn> {
                           fontWeight: FontWeight.bold
                       ),
                     ),
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () async {
                         ChatServices.navigateCallback = () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => ChatScreen()),
+                            MaterialPageRoute(builder: (context) => const ChatScreen()),
                           );
                         };
                          await ChatServices.signInWithGoogle();
@@ -95,11 +95,9 @@ class _SignInState extends State<SignIn> {
                         if(signedInUser != null){
                           ChatServices.storeUserInformation(signedInUser);
                         }
-
-
                       },
                       style: ButtonStyle(
-                        backgroundColor: MaterialStateProperty.all<Color>(Colors.white)
+                        backgroundColor: WidgetStateProperty.all<Color>(Colors.white)
                       ),
                       child: Wrap(
                         crossAxisAlignment: WrapCrossAlignment.center,
@@ -131,7 +129,7 @@ class _SignInState extends State<SignIn> {
 
                         },
                         style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all<Color>(Colors.white)
+                            backgroundColor: WidgetStateProperty.all<Color>(Colors.white)
                         ),
                         child: Wrap(
                             crossAxisAlignment: WrapCrossAlignment.center,
@@ -162,7 +160,7 @@ class _SignInState extends State<SignIn> {
 
                     },
                         style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all<Color>(Colors.white)
+                            backgroundColor: WidgetStateProperty.all<Color>(Colors.white)
                         ),
                         child: Wrap(
                             crossAxisAlignment: WrapCrossAlignment.center,
@@ -188,9 +186,9 @@ class _SignInState extends State<SignIn> {
                             ]
                         )
                     ),
-                    SizedBox( height: 10),
+                    const SizedBox( height: 10),
 
-                    ElevatedButton(
+                    const ElevatedButton(
               onPressed: ChatServices.signOutWithGoogle, child: Text('sign out'),
             ),
                   ],
